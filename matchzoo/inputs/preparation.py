@@ -48,11 +48,11 @@ class Preparation(object):
             line = line
             line = line.strip()
             label, t1, t2 = self.parse_line(line)
-            id1 = self.get_text_id(hashid, t1, 'T')
-            id2 = self.get_text_id(hashid, t2, 'T')
-            corpus[id1] = t1
-            corpus[id2] = t2
-            rels.append((label, id1, id2))
+            # id1 = self.get_text_id(hashid, t1, 'T')
+            # id2 = self.get_text_id(hashid, t2, 'T')
+            # corpus[id1] = t1
+            # corpus[id2] = t2
+            rels.append((label, t1, t2))
         f.close()
         return corpus, rels
 
@@ -231,13 +231,13 @@ class Preparation(object):
 
 if __name__ == '__main__':
     prepare = Preparation()
-    basedir = '../../data/example/ranking/'
+    basedir = '../../data/robust04/'
     corpus, rels = prepare.run_with_one_corpus(basedir + 'sample.txt')
     print('total corpus : %d ...' % (len(corpus)))
     print('total relations : %d ...' % (len(rels)))
-    prepare.save_corpus(basedir + 'corpus.txt', corpus)
+    #prepare.save_corpus(basedir + 'corpus.txt', corpus)
 
-    rel_train, rel_valid, rel_test = prepare.split_train_valid_test(rels, (0.8, 0.1, 0.1))
+    rel_train, rel_valid, rel_test = prepare.split_train_valid_test_for_ranking(rels, (0.8, 0.1, 0.1))
     prepare.save_relation(basedir + 'relation_train.txt', rel_train)
     prepare.save_relation(basedir + 'relation_valid.txt', rel_valid)
     prepare.save_relation(basedir + 'relation_test.txt', rel_test)

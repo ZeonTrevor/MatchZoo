@@ -157,6 +157,21 @@ class Preprocess(object):
         return docs, config['words_useless']
 
     @staticmethod
+    def word_filter_cf_based(docs, config, words_stats):
+        if config['words_useless'] is None:
+            config['words_useless'] = set()
+            # filter with stop_words
+            # config['words_useless'].update(config['stop_words'])
+            # filter with min_freq and max_freq
+            for w, winfo in words_stats.items():
+                # filter words that occurs only a few times in the corpus
+                if config['min_freq'] > winfo['cf']:
+                    config['words_useless'].add(w)
+        # filter with useless words
+        docs = [[w for w in ws if w not in config['words_useless']] for ws in tqdm(docs)]
+        return docs, config['words_useless']
+
+    @staticmethod
     def doc_filter(dids, docs, config):
         new_docs = list()
         new_dids = list()
@@ -490,19 +505,19 @@ def _test_hist():
 if __name__ == '__main__':
     #_test_ngram()
     # test with sample data
-    basedir = '../../data/example/ranking/'
-    prepare = Preparation()
-    sample_file = basedir + 'sample.txt'
-    corpus, rels = prepare.run_with_one_corpus(sample_file)
-    print ('total corpus size', len(corpus))
-    print ('total relations size', len(rels))
-    prepare.save_corpus(basedir + 'corpus.txt', corpus)
-    prepare.save_relation(basedir + 'relation.txt', rels)
-    print ('preparation finished ...')
+    basedir = '../../data/robust04/'
+    #prepare = Preparation()
+    #sample_file = basedir + 'sample.txt'
+    #corpus, rels = prepare.run_with_one_corpus(sample_file)
+    #print ('total corpus size', len(corpus))
+    #print ('total relations size', len(rels))
+    #prepare.save_corpus(basedir + 'corpus.txt', corpus)
+    #prepare.save_relation(basedir + 'relation.txt', rels)
+    #print ('preparation finished ...')
 
     print ('begin preprocess...')
     # Prerpocess corpus file
-    preprocessor = Preprocess(min_freq=1)
+    preprocessor = Preprocess()
     dids, docs = preprocessor.run(basedir + 'corpus.txt')
     preprocessor.save_word_dict(basedir + 'word_dict.txt')
     preprocessor.save_words_stats(basedir + 'word_stats.txt')
