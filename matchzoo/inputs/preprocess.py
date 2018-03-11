@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import string
 import jieba
 import sys
 import six
@@ -21,6 +22,7 @@ class Preprocess(object):
 
     _valid_lang = ['en', 'cn']
     _stemmer = SnowballStemmer('english')
+    _table = str.maketrans('', '', string.punctuation)
 
     def __init__(self,
                  word_seg_config = {},
@@ -105,6 +107,7 @@ class Preprocess(object):
     @staticmethod
     def word_seg_en(docs):
         docs = [word_tokenize(sent) for sent in tqdm(docs)]
+        # docs = [[word.translate(Preprocess._table) for word in word_tokenize(sent)] for sent in tqdm(docs)]
         # show the progress of word segmentation with tqdm
         '''docs_seg = []
         print('docs size', len(docs))
@@ -516,13 +519,13 @@ if __name__ == '__main__':
     #print ('preparation finished ...')
 
     print ('begin preprocess...')
-    # Prerpocess corpus file
+    # Preprocess corpus file
     preprocessor = Preprocess()
-    dids, docs = preprocessor.run(basedir + 'corpus.txt')
-    preprocessor.save_word_dict(basedir + 'word_dict.txt')
-    preprocessor.save_words_stats(basedir + 'word_stats.txt')
+    dids, docs = preprocessor.run(basedir + 'corpus_n_stem.txt')
+    preprocessor.save_word_dict(basedir + 'word_dict_n_stem.txt')
+    preprocessor.save_words_stats(basedir + 'word_stats_n_stem.txt')
 
-    fout = open(basedir + 'corpus_preprocessed.txt', 'w')
+    fout = open(basedir + 'corpus_preprocessed_n_stem.txt', 'w')
     for inum, did in enumerate(dids):
         fout.write('%s\t%s\n' % (did, ' '.join(map(str, docs[inum]))))
     fout.close()
