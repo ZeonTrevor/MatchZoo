@@ -148,7 +148,7 @@ def load_word_embedding(vocab, w2v_file):
 
     oov_word_list = [w for w in vocab if w not in pre_trained]
     print('oov word list example (30): ', oov_word_list[:30])
-    # pickle.dump(oov_word_list, open('oov_glove_rob04.p', 'wb'), protocol=2)
+    pickle.dump(oov_word_list, open('oov_rob04_n_stem.p', 'wb'), protocol=2)
 
     embeddings = np.array(embeddings, dtype=np.float32)
     return embeddings, pre_trained
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     w2v_file = sys.argv[1]  # w2v_file
     word_dict_file = sys.argv[2]  # word_dict_file
     mapped_w2v_file = sys.argv[3] # output shared w2v dict
-    w2v_file_2 = sys.argv[4] # w2v_file to append
+    # w2v_file_2 = sys.argv[4] # w2v_file to append
 
     word_dict = {}
 
@@ -182,13 +182,13 @@ if __name__ == '__main__':
     print('load word vectors ...')
     embeddings, pre_trained = load_word_embedding(word_dict, w2v_file)
 
-    embeddings_final = append_word_embedding_gensim(word_dict, w2v_file_2, embeddings, pre_trained)
+    # embeddings_final = append_word_embedding_gensim(word_dict, w2v_file_2, embeddings, pre_trained)
 
     print('save word vectors ...')
     with open(mapped_w2v_file, 'w') as fw:
         # assert word_dict
         for w, idx in tqdm(word_dict.items()):
-            print(word_dict[w], ' '.join(map(str, embeddings_final[idx])), file=fw)
+            print(word_dict[w], ' '.join(map(str, embeddings[idx])), file=fw)
 
     print('Map word vectors finished ...')
 
