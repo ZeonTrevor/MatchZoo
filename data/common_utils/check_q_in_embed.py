@@ -49,8 +49,8 @@ if __name__ == '__main__':
     w2v_file = sys.argv[1]
 
     basedir = '../robust04/'
-    in_dict_file = basedir + 'word_dict.txt'
-    in_corpus_preprocessed_file = basedir + 'corpus_preprocessed_q.txt'
+    in_dict_file = basedir + 'word_dict_n_stem.txt'
+    in_corpus_preprocessed_file = basedir + 'corpus_preprocessed_n_stem.txt'
     
     word_dict = {}
 
@@ -60,22 +60,25 @@ if __name__ == '__main__':
     print('Loading docs....')
     dids, docs = read_doc(in_corpus_preprocessed_file)
 
+    print('Loading vocab....')
     vocab = set()
-    for doc in docs:
+    for doc in tqdm(docs):
         for wid in doc:
-            vocab.add(word_dict[wid]) 
-    print('length of vocab in queries %s' % len(vocab))
+            vocab.add(word_dict[wid])
+    print('length of vocab in corpus %s' % len(vocab))
 
     model_wv = KeyedVectors.load_word2vec_format(w2v_file)
-    count = 0
-    
+    count = 0.0
+
+    print('Counting oov words...')
     oov_q = []
-    for w in vocab:
+    for w in tqdm(vocab):
         if w in model_wv:
             count += 1
         else:
             oov_q.append(w)
 
-    print('No. of oov query words %s' % len(oov_q))
-    pickle.dump(oov_q, open("oov_q.p", "wb" ))
-    print('No. of stemmed query words in embeddings %s' % count)
+
+    print('No. of oov corpus words %s' % len(oov_q))
+    pickle.dump(oov_q, open("oov_rob04_n_stem.p", "wb" ))
+    print('No. of stemmed words in embeddings %s' % (count/len(model_wv.index2word)))

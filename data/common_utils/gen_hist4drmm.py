@@ -11,17 +11,17 @@ from rank_io import *
 if __name__ == '__main__':
     hist_size = int(sys.argv[1])
     srcdir = '../robust04/'
-    embedfile = srcdir + 'embed_glove_rob04_af_d300_norm'
-    corpusfile = srcdir + 'corpus_preprocessed_filtered_min10cf.txt'
+    embedfile = srcdir + 'embed_rob04_n_stem_d300_norm'
+    corpusfile = srcdir + 'corpus_preprocessed_n_stem_filtered_rob04_embed.txt'
 
     relfiles = [ srcdir + 'relation_train.txt',
             srcdir + 'relation_valid.txt',
             srcdir + 'relation_test.txt'
             ]
     histfiles = [
-            srcdir + 'relation_train.hist-%d.txt' % hist_size,
-            srcdir + 'relation_valid.hist-%d.txt' % hist_size,
-            srcdir + 'relation_test.hist-%d.txt' % hist_size
+            srcdir + 'relation_train_n_stem.hist-%d.txt' % hist_size,
+            srcdir + 'relation_valid_n_stem.hist-%d.txt' % hist_size,
+            srcdir + 'relation_test_n_stem.hist-%d.txt' % hist_size
             ]
     embed_dict = read_embedding(filename = embedfile)
     print('read embedding finished ...')
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             d1_embed = embed[corpus[d1]]
             d2_embed = embed[corpus[d2]]
             curr_hist = cal_hist(d1_embed, d2_embed, qnum, hist_size)
-	    
+
             curr_hist = curr_hist.tolist()
             fout.write(' '.join(map(str, curr_hist)))
             fout.write('\n')

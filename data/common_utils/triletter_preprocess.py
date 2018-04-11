@@ -1,3 +1,5 @@
+# coding: utf8
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -34,9 +36,9 @@ def filter_triletter(tri_stats, min_filter_num=5, max_filter_num=10000):
 if __name__ == '__main__':
     
     dstdir = '../robust04/'
-    word_dict_input = dstdir + 'word_dict.txt'
-    triletter_dict_output = dstdir + 'triletter_dict.txt'
-    word_triletter_output = dstdir + 'word_triletter_map.txt'
+    word_dict_input = dstdir + 'word_dict_n_stem_filtered_rob04_embed.txt'
+    triletter_dict_output = dstdir + 'triletter_dict_n_stem_filtered_rob04_embed.txt'
+    word_triletter_output = dstdir + 'word_triletter_map_n_stem_filtered_rob04_embed.txt'
     
     word_dict = read_dict(word_dict_input)
     word_triletter_map = {}

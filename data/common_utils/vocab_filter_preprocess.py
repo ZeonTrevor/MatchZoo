@@ -8,6 +8,7 @@ sys.path.append('../../matchzoo/utils')
 from preprocess import *
 from tqdm import tqdm
 from nltk.corpus import stopwords as nltk_stopwords
+from gensim.models.keyedvectors import KeyedVectors
 
 def read_dict(infile):
     word_dict = {}
@@ -49,15 +50,46 @@ def save_word_stats(word_dict, words_stats, words_stats_fp, sort=False):
         lines = ['%s %d %d %f' % (wid, words_stats[wid]['cf'], words_stats[wid]['df'], words_stats[wid]['idf']) for w, wid in word_dict.items()]
     Preprocess.save_lines(words_stats_fp, lines)
 
+def load_word_embedding(word_embed_fp):
+    model_wv = KeyedVectors.load_word2vec_format(word_embed_fp)
+    return model_wv
+
+def load_query_vocab(query_preprocessed_file):
+    dids, docs = read_doc(query_preprocessed_file)
+
+    vocab = set()
+    for doc in tqdm(docs):
+        for wid in doc:
+            vocab.add(word_dict[wid])
+    print('length of vocab in query %s' % len(vocab))
+    return vocab
+
+def filter_embeddings_terms(docs, model_wv, query_vocab, word_dict):
+    docs_output = []
+    words_filtered_ids = set()
+
+    for ws in tqdm(docs):
+        doc_output = []
+        for wid in ws:
+            if word_dict[wid] in model_wv or wid in query_vocab:
+                doc_output.append(wid)
+            else:
+                words_filtered_ids.add(wid)
+        docs_output.append(doc_output)
+
+    return docs_output, words_filtered_ids
+
 if __name__ == '__main__':
     basedir = '../robust04/'
-    in_dict_file = basedir + 'word_dict.txt'
-    in_corpus_preprocessed_file = basedir + 'corpus_preprocessed.txt'
-    in_words_stats_file = basedir + 'word_stats.txt'
+    in_dict_file = basedir + 'word_dict_n_stem.txt'
+    in_corpus_preprocessed_file = basedir + 'corpus_preprocessed_n_stem.txt'
+    in_q_preprocessed_file = basedir + 'corpus_preprocessed_q_n_stem.txt'
+    in_words_stats_file = basedir + 'word_stats_n_stem.txt'
+    in_word_embeddings_file = '/home/fernando/drrm/wordembedding/rob04.d300.txt'
 
-    out_corpus_preprocessed_file = basedir + 'corpus_preprocessed_filtered_min10cf.txt'
-    out_dict_file = basedir + 'word_dict_filtered_min10cf.txt'
-    out_stats_file = basedir + 'word_stats_filtered_min10cf.txt'
+    out_corpus_preprocessed_file = basedir + 'corpus_preprocessed_n_stem_filtered_rob04_embed.txt'
+    out_dict_file = basedir + 'word_dict_n_stem_filtered_rob04_embed.txt'
+    out_stats_file = basedir + 'word_stats_n_stem_filtered_rob04_embed.txt'
 
     print('Loading word dict...')
     word_dict = read_dict(in_dict_file)
@@ -67,10 +99,21 @@ if __name__ == '__main__':
 
     print('Loading word stats...')
     words_stats = load_word_stats(in_words_stats_file)
-    
-    print('Filtering words with frequency less than 10 in the corpus...')
-    words_filter_config = {'words_useless': None, 'stop_words': nltk_stopwords.words('english'), 'min_freq': 10}
-    docs, words_filtered_ids = Preprocess.word_filter_cf_based(docs, words_filter_config, words_stats)    
+
+    print('Loading query vocab...')
+    query_vocab = load_query_vocab(in_q_preprocessed_file)
+
+    print('Loading word embedding using gensim....')
+    model_wv = load_word_embedding(in_word_embeddings_file)
+    print('Number of words in embeddings file %s' % len(model_wv.index2word))
+
+    print('Filtering words that are not present in the robust04 word embeddings...')
+    # words_filter_config = {'words_useless': None, 'stop_words': nltk_stopwords.words('english'), 'min_freq': 10}
+    # docs, words_filtered_ids = Preprocess.word_filter_cf_based(docs, words_filter_config, words_stats)
+
+    # docs = [[wid for wid in ws if wid in model_wv or wid in query_vocab] for ws in tqdm(docs)]
+    docs, words_filtered_ids = filter_embeddings_terms(docs, model_wv, query_vocab, word_dict)
+    print('Number of words filtered from vocab %s' % len(words_filtered_ids))
 
     words_dict_filtered = {}
     iwords_dict_filtered = {}
@@ -78,9 +121,14 @@ if __name__ == '__main__':
         if wid not in words_filtered_ids:
             words_dict_filtered[word] = wid
             iwords_dict_filtered[wid] = word
-    
+
+    print('Number of words in words_dict_filtered %s' % len(words_dict_filtered))
+
     print('Remapping wids back to words in documents...')
     docs = [[iwords_dict_filtered[wid] for wid in ws if wid in iwords_dict_filtered] for ws in tqdm(docs)]
+
+    for doc in docs[0:3]:
+        print(doc)
 
     print('Rebuilding word index again from filtered words...')
     docs, new_word_dict = Preprocess.word_index(docs, {'word_dict': None})
@@ -103,7 +151,7 @@ if __name__ == '__main__':
     print('Saving corpus preprocessed removing min freq words...')
     fout = open(out_corpus_preprocessed_file, 'w')
     for inum, did in enumerate(dids):
-        fout.write('%s\t%s\n' % (did, ' '.join(map(str, docs[inum]))))
+        fout.write('%s %s %s\n' % (did, len(docs[inum]),' '.join(map(str, docs[inum]))))
     fout.close()
 
     print('Completed Filtering Process...')
