@@ -33,7 +33,7 @@ class ListBasicGenerator(object):
         for label, d1, d2 in rel:
             if d1 not in list_list:
                 list_list[d1] = []
-            list_list[d1].append( (label, d2) )
+            list_list[d1].append((label, d2))
         for d1 in list_list:
             list_list[d1] = sorted(list_list[d1], reverse = True)
         print('List Instance Count:', len(list_list), end='\n')
@@ -50,6 +50,8 @@ class ListBasicGenerator(object):
 
     def get_all_data(self):
         pass
+
+
 class ListGenerator(ListBasicGenerator):
     def __init__(self, config={}):
         super(ListGenerator, self).__init__(config=config)
@@ -373,6 +375,7 @@ class DRMM_ListGenerator(ListBasicGenerator):
     def get_batch_generator(self):
         for X1, X1_len, X2, X2_len, Y, ID_pairs, list_counts in self.get_batch():
             yield ({'query': X1, 'query_len': X1_len, 'doc': X2, 'doc_len': X2_len, 'ID': ID_pairs, 'list_counts': list_counts}, Y)
+
     def get_all_data(self):
         x1_ls, x1_len_ls, x2_ls, x2_len_ls, y_ls, list_count_ls = [], [], [], [], [], []
         while self.point < self.num_list:

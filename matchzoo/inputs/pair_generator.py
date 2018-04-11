@@ -31,6 +31,7 @@ class PairBasicGenerator(object):
                 print('[%s] Error %s not in config' % (self.__name, e), end='\n')
                 return False
         return True
+
     def make_pair_static(self, rel):
         rel_set = {}
         pair_list = []

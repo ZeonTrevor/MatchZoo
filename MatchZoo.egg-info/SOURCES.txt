@@ -1,3 +1,4 @@
+README.md
 setup.py
 MatchZoo.egg-info/PKG-INFO
 MatchZoo.egg-info/SOURCES.txt
@@ -23,6 +24,8 @@ matchzoo/losses/rank_losses.py
 matchzoo/metrics/__init__.py
 matchzoo/metrics/evaluations.py
 matchzoo/metrics/rank_evaluations.py
+matchzoo/optimizers/__init__.py
+matchzoo/optimizers/optimizers.py
 matchzoo/utils/__init__.py
 matchzoo/utils/rank_io.py
 matchzoo/utils/roc_auc.py

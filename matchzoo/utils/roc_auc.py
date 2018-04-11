@@ -36,7 +36,7 @@ def calculate_roc_auc(file_path, roc_save_path, title):
         if x != prev_x:
             auc += (x - prev_x) * y
             prev_x = x
-    print "the auc is %s."%auc
+    print("the auc is %s."%auc)
     x = [_v[0] for _v in xy_arr]
     y = [_v[1] for _v in xy_arr]
     pl.title("%s ROC curve (AUC = %.4f)" % (title, auc))

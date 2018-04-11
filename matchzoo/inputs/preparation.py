@@ -235,7 +235,7 @@ if __name__ == '__main__':
     corpus, rels = prepare.run_with_one_corpus(basedir + 'sample.txt')
     print('total corpus : %d ...' % (len(corpus)))
     print('total relations : %d ...' % (len(rels)))
-    #prepare.save_corpus(basedir + 'corpus.txt', corpus)
+    # prepare.save_corpus(basedir + 'corpus.txt', corpus)
 
     rel_train, rel_valid, rel_test = prepare.split_train_valid_test_for_ranking(rels, (0.8, 0.1, 0.1))
     prepare.save_relation(basedir + 'relation_train.txt', rel_train)

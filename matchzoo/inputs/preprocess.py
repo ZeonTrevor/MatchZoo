@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import re
 import string
 import jieba
 import sys
@@ -11,6 +12,7 @@ from tqdm import tqdm
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords as nltk_stopwords
 from nltk.stem import SnowballStemmer
+from krovetzstemmer import Stemmer
 
 sys.path.append('../inputs')
 sys.path.append('../utils')
@@ -22,7 +24,10 @@ class Preprocess(object):
 
     _valid_lang = ['en', 'cn']
     _stemmer = SnowballStemmer('english')
-    _table = str.maketrans('', '', string.punctuation)
+    # _table = string.maketrans('', '', string.punctuation)
+    _krovetz_stemmer = Stemmer()
+    _printable_set = set(string.printable)
+    _exclude_punct = set(string.punctuation)
 
     def __init__(self,
                  word_seg_config = {},
@@ -105,15 +110,53 @@ class Preprocess(object):
         return dids, docs
 
     @staticmethod
+    def is_number(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            pass
+
+        try:
+            import unicodedata
+            unicodedata.numeric(s)
+            return True
+        except (TypeError, ValueError):
+            pass
+
+        return False
+
+    @staticmethod
     def word_seg_en(docs):
-        docs = [word_tokenize(sent) for sent in tqdm(docs)]
-        # docs = [[word.translate(Preprocess._table) for word in word_tokenize(sent)] for sent in tqdm(docs)]
+        #docs = [word_tokenize(sent) for sent in tqdm(docs)]
+        #docs = [[word for word in word_tokenize(sent) if word not in Preprocess._exclude_punct and not Preprocess.is_number(word)] for sent in tqdm(docs)]
+        docs_output = []
+        for sent in tqdm(docs):
+            doc_output = []
+            for w in word_tokenize(sent):
+                if w not in Preprocess._exclude_punct:
+                    w = w.replace("'s", "")
+                    w = w.strip(string.punctuation)
+                    w = filter(lambda x: x in Preprocess._printable_set, w)
+                    w = re.sub("[,`'+*:=^]","", w)
+
+                    if re.match(".*[-/_].*", w):
+                        w_tokens = re.split("-|/|_", w)
+                        for token in w_tokens:
+                            token = token.strip(string.punctuation)
+                            if not Preprocess.is_number(token) and token:
+                                doc_output.append(token)
+                    elif w:
+                        if not Preprocess.is_number(w):
+                            doc_output.append(w)
+
+            docs_output.append(doc_output)
         # show the progress of word segmentation with tqdm
         '''docs_seg = []
         print('docs size', len(docs))
         for i in tqdm(range(len(docs))):
             docs_seg.append(word_tokenize(docs[i]))'''
-        return docs
+        return docs_output
 
     @staticmethod
     def word_seg_cn(docs):
@@ -186,7 +229,8 @@ class Preprocess(object):
 
     @staticmethod
     def word_stem(docs):
-        docs = [[Preprocess._stemmer.stem(w) for w in ws] for ws in tqdm(docs)]
+        #docs = [[Preprocess._stemmer.stem(w) for w in ws] for ws in tqdm(docs)]
+        docs = [[Preprocess._krovetz_stemmer.stem(w) for w in ws] for ws in tqdm(docs)]
         return docs
 
     @staticmethod
@@ -522,13 +566,14 @@ if __name__ == '__main__':
     # Preprocess corpus file
     preprocessor = Preprocess()
     dids, docs = preprocessor.run(basedir + 'corpus_n_stem.txt')
-    preprocessor.save_word_dict(basedir + 'word_dict_n_stem.txt')
-    preprocessor.save_words_stats(basedir + 'word_stats_n_stem.txt')
+    preprocessor.save_word_dict(basedir + 'word_dict_n_stem.txt', sort=True)
+    preprocessor.save_words_stats(basedir + 'word_stats_n_stem.txt', sort=True)
 
     fout = open(basedir + 'corpus_preprocessed_n_stem.txt', 'w')
     for inum, did in enumerate(dids):
-        fout.write('%s\t%s\n' % (did, ' '.join(map(str, docs[inum]))))
+        fout.write('%s %s %s\n' % (did, len(docs[inum]), ' '.join(map(str, docs[inum]))))
     fout.close()
     print('preprocess finished ...')
+
 
 
