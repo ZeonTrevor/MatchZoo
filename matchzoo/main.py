@@ -1,14 +1,20 @@
 # -*- coding: utf8 -*-
 from __future__ import print_function
+
+# import comet_ml in the top of your file
+from comet_ml import Experiment
+
 import os
 import sys
 import time
 import json
 import argparse
 import random
+import math
 random.seed(49999)
-import numpy
-numpy.random.seed(49999)
+import numpy as np
+np.random.seed(49999)
+
 import tensorflow
 tensorflow.set_random_seed(49999)
 
@@ -17,6 +23,7 @@ from collections import OrderedDict
 import keras
 import keras.backend as K
 from keras.models import Sequential, Model
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 
 from utils import *
 import inputs
@@ -43,6 +50,16 @@ def load_model(config):
     return mo
 
 
+def step_decay(epoch):
+    initial_lrate = 0.001
+    drop = 0.9
+    epochs_drop = 50.0
+    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
+    if lrate > 0.0001:
+        return lrate
+    else:
+        return 0.0001
+
 def train(config):
 
     print(json.dumps(config, indent=2), end='\n')
@@ -67,7 +84,7 @@ def train(config):
         _PAD_ = share_input_conf['vocab_size'] - 1
         embed_dict[_PAD_] = np.zeros((share_input_conf['embed_size'], ), dtype=np.float32)
         embed = np.float32(np.random.uniform(-0.2, 0.2, [share_input_conf['vocab_size'], share_input_conf['embed_size']]))
-        share_input_conf['embed'] = convert_embed_2_numpy(embed_dict, embed = embed)
+        share_input_conf['embed'] = convert_embed_2_numpy(embed_dict, embed=embed)
     else:
         embed = np.float32(np.random.uniform(-0.2, 0.2, [share_input_conf['vocab_size'], share_input_conf['embed_size']]))
         share_input_conf['embed'] = embed
@@ -142,7 +159,15 @@ def train(config):
     model.compile(optimizer=optimizer, loss=loss)
     print('[Model] Model Compile Done.', end='\n')
 
+    filepath = "./examples/robust04/weights.best.hdf5"
+    #checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    #lrate = LearningRateScheduler(step_decay)
+    #callbacks_list = [lrate]
+
+    best_map_val = 0.0
     for i_e in range(num_iters):
+        new_lrate = step_decay(i_e)
+        K.set_value(model.optimizer.lr, new_lrate)
         for tag, generator in train_gen.items():
             genfun = generator.get_batch_generator()
             print('[%s]\t[Train:%s] ' % (time.strftime('%m-%d-%Y %H:%M:%S', time.localtime(time.time())), tag), end='')
@@ -153,7 +178,7 @@ def train(config):
                     shuffle=False,
                     verbose = 0
                 ) #callbacks=[eval_map])
-            print('Iter:%d\tloss=%.6f' % (i_e, history.history['loss'][0]), end='\n')
+            print('Iter:%d\tloss=%.6f\tlr=%.6f' % (i_e, history.history['loss'][0], new_lrate), end='\n')
 
         for tag, generator in eval_gen.items():
             genfun = generator.get_batch_generator()
@@ -172,10 +197,15 @@ def train(config):
                     num_valid += len(list_counts) - 1
                 else:
                     for k, eval_func in eval_metrics.items():
-                        res[k] += eval_func(y_true = y_true, y_pred = y_pred)
+                        res[k] += eval_func(y_true=y_true, y_pred=y_pred)
                     num_valid += 1
             generator.reset()
             print('Iter:%d\t%s' % (i_e, '\t'.join(['%s=%f'%(k,v/num_valid) for k, v in res.items()])), end='\n')
+            if tag == 'test':
+                if (res['map']/num_valid) > best_map_val:
+                    print('Saving best model based on MAP value: %f' % (res['map']/num_valid))
+                    best_map_val = res['map']/num_valid
+                    model.save_weights(filepath)
             sys.stdout.flush()
         if (i_e+1) % save_weights_iters == 0:
             model.save_weights(weights_file % (i_e+1))
@@ -193,7 +223,7 @@ def predict(config):
         _PAD_ = share_input_conf['vocab_size'] - 1
         embed_dict[_PAD_] = np.zeros((share_input_conf['embed_size'], ), dtype=np.float32)
         embed = np.float32(np.random.uniform(-0.02, 0.02, [share_input_conf['vocab_size'], share_input_conf['embed_size']]))
-        share_input_conf['embed'] = convert_embed_2_numpy(embed_dict, embed = embed)
+        share_input_conf['embed'] = convert_embed_2_numpy(embed_dict, embed=embed)
     else:
         embed = np.float32(np.random.uniform(-0.2, 0.2, [share_input_conf['vocab_size'], share_input_conf['embed_size']]))
         share_input_conf['embed'] = embed
@@ -311,11 +341,14 @@ def predict(config):
         sys.stdout.flush()
 
 def main(argv):
+    # Add the following code anywhere in your machine learning file
+    experiment = Experiment(api_key="PhzBYNpSC304fMjGUoU42dX9b")
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--phase', default='train', help='Phase: Can be train or predict, the default value is train.')
     parser.add_argument('--model_file', default='./models/arci.config', help='Model_file: MatchZoo model file for the chosen model.')
     args = parser.parse_args()
-    model_file =  args.model_file
+    model_file = args.model_file
     with open(model_file, 'r') as f:
         config = json.load(f)
     phase = args.phase
