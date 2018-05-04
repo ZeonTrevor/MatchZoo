@@ -7,8 +7,8 @@ from keras.constraints import maxnorm, unitnorm, non_neg, min_max_norm, non_neg
 from keras.regularizers import l2, l1
 from keras.layers import Input, Embedding, Dense, Activation, Lambda, Dot
 from keras.activations import softmax
-from model import BasicModel
-from utils.utility import *
+from .model import BasicModel
+from matchzoo.utils.utility import *
 
 class KNRM(BasicModel):
     def __init__(self, config):

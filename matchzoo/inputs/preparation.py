@@ -10,6 +10,7 @@ import random
 
 import preprocess
 
+from sklearn.model_selection import KFold
 
 class Preparation(object):
     '''Convert dataset of different text matching tasks into a unified format as the input of deep matching modules. Users provide datasets contain pairs of texts along with their labels, and the module produces the following files:
@@ -213,7 +214,8 @@ class Preparation(object):
         qid_train = qid_group[: num_train]
         qid_valid = qid_group[num_train: valid_end]
         qid_test = qid_group[valid_end:]
-
+        print("train:%s" %(','.join(qid_train)))
+        print("test:%s" % (','.join(qid_test)))
         def select_rel_by_qids(qids):
             rels = []
             qids = set(qids)
@@ -228,6 +230,41 @@ class Preparation(object):
 
         return rel_train, rel_valid, rel_test
 
+    @staticmethod
+    def split_cv_for_ranking(relations, basedir, kfolds=5):
+        qid_group = set()
+        for r, q, d in relations:
+            qid_group.add(q)
+        qid_group = list(qid_group)
+
+        #random.shuffle(qid_group)
+        total_rel = len(qid_group)
+        kf = KFold(n_splits=kfolds)
+        qid_group = np.array(qid_group)
+
+        def select_rel_by_qids(qids):
+            rels = []
+            qids = set(qids)
+            for r, q, d in relations:
+                if q in qids:
+                    rels.append((r, q, d))
+            return rels
+
+        k = 1
+        for train, test in kf.split(qid_group):
+            print(len(train), len(test))
+            qid_train = qid_group[train]
+            qid_test = qid_group[test]
+            print("train:%s" % (','.join(qid_train)))
+            print("test:%s" % (','.join(qid_test)))
+
+            rel_train = select_rel_by_qids(qid_train)
+            rel_test = select_rel_by_qids(qid_test)
+            prepare.save_relation(basedir + 'cv_splits/train' + str(k) + '.txt', rel_train)
+            prepare.save_relation(basedir + 'cv_splits/test' + str(k) + '.txt', rel_test)
+            k += 1
+
+
 
 if __name__ == '__main__':
     prepare = Preparation()
@@ -237,8 +274,9 @@ if __name__ == '__main__':
     print('total relations : %d ...' % (len(rels)))
     # prepare.save_corpus(basedir + 'corpus.txt', corpus)
 
-    rel_train, rel_valid, rel_test = prepare.split_train_valid_test_for_ranking(rels, (0.8, 0.1, 0.1))
-    prepare.save_relation(basedir + 'relation_train.txt', rel_train)
-    prepare.save_relation(basedir + 'relation_valid.txt', rel_valid)
-    prepare.save_relation(basedir + 'relation_test.txt', rel_test)
+    #rel_train, rel_valid, rel_test = prepare.split_train_valid_test_for_ranking(rels, (0.8, 0.0, 0.2))
+    #prepare.save_relation(basedir + 'relation_train.txt', rel_train)
+    #prepare.save_relation(basedir + 'relation_valid.txt', rel_valid)
+    #prepare.save_relation(basedir + 'relation_test.txt', rel_test)
+    prepare.split_cv_for_ranking(rels, basedir)
     print('Done ...')
