@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -26,7 +26,7 @@ def read_doc(infile):
     for line in tqdm(f):
         r = line.strip().split()
         dids.append(r[0])
-        docs.append(r[1:])
+        docs.append(r[2:])
         #doc[r[0]] = r[1:]
         #assert len(doc[r[0]]) == int(r[1])
     return dids, docs
@@ -71,7 +71,7 @@ def filter_embeddings_terms(docs, model_wv, query_vocab, word_dict):
     for ws in tqdm(docs):
         doc_output = []
         for wid in ws:
-            if word_dict[wid] in model_wv or wid in query_vocab:
+            if word_dict[wid] in model_wv or word_dict[wid] in query_vocab:
                 doc_output.append(wid)
             else:
                 words_filtered_ids.add(wid)
@@ -87,9 +87,9 @@ if __name__ == '__main__':
     in_words_stats_file = basedir + 'word_stats_n_stem.txt'
     in_word_embeddings_file = '/home/fernando/drrm/wordembedding/rob04.d300.txt'
 
-    out_corpus_preprocessed_file = basedir + 'corpus_preprocessed_n_stem_filtered_rob04_embed.txt'
-    out_dict_file = basedir + 'word_dict_n_stem_filtered_rob04_embed.txt'
-    out_stats_file = basedir + 'word_stats_n_stem_filtered_rob04_embed.txt'
+    out_corpus_preprocessed_file = basedir + 'corpus_new_n_stem_filtered_rob04_embed.txt'
+    out_dict_file = basedir + 'word_dict_new_n_stem_filtered_rob04_embed.txt'
+    out_stats_file = basedir + 'word_stats_new_n_stem_filtered_rob04_embed.txt'
 
     print('Loading word dict...')
     word_dict = read_dict(in_dict_file)
@@ -127,12 +127,14 @@ if __name__ == '__main__':
     print('Remapping wids back to words in documents...')
     docs = [[iwords_dict_filtered[wid] for wid in ws if wid in iwords_dict_filtered] for ws in tqdm(docs)]
 
-    for doc in docs[0:3]:
-        print(doc)
+    # for doc in docs[0:50]:
+    #     for word in doc:
+    #         print(word, end=' ')
+    #     print('', end="\n")
 
     print('Rebuilding word index again from filtered words...')
     docs, new_word_dict = Preprocess.word_index(docs, {'word_dict': None})
-    
+
     new_word_stats = {}
     for w, wid in new_word_dict.items():
         old_wid = words_dict_filtered[w]
@@ -147,8 +149,8 @@ if __name__ == '__main__':
 
     print('Saving filtered word stats...')
     save_word_stats(new_word_dict, new_word_stats, out_stats_file)
- 
-    print('Saving corpus preprocessed removing min freq words...')
+
+    print('Saving corpus preprocessed removing words not in embeddings...')
     fout = open(out_corpus_preprocessed_file, 'w')
     for inum, did in enumerate(dids):
         fout.write('%s %s %s\n' % (did, len(docs[inum]),' '.join(map(str, docs[inum]))))

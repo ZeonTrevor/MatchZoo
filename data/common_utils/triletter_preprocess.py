@@ -20,7 +20,7 @@ def read_doc(infile):
     doc = {}
     for line in open(infile):
         r = line.strip().split()
-        doc[r[0]] = r[1:]
+        doc[r[0]] = r[2:]
         #assert len(doc[r[0]]) == int(r[1])
     return doc
 
@@ -36,9 +36,9 @@ def filter_triletter(tri_stats, min_filter_num=5, max_filter_num=10000):
 if __name__ == '__main__':
     
     dstdir = '../robust04/'
-    word_dict_input = dstdir + 'word_dict_n_stem_filtered_rob04_embed.txt'
-    triletter_dict_output = dstdir + 'triletter_dict_n_stem_filtered_rob04_embed.txt'
-    word_triletter_output = dstdir + 'word_triletter_map_n_stem_filtered_rob04_embed.txt'
+    word_dict_input = dstdir + 'word_dict_n_stem.txt'
+    triletter_dict_output = dstdir + 'triletter_dict_n_stem.txt'
+    word_triletter_output = dstdir + 'word_triletter_map_n_stem.txt'
     
     word_dict = read_dict(word_dict_input)
     word_triletter_map = {}
@@ -55,7 +55,8 @@ if __name__ == '__main__':
             word_triletter_map[wid].append(tric)
     
     triletter_dict = filter_triletter(triletter_stats, 5, 10000)
-    
+    print("length of triletter dict: %d " % (len(triletter_dict)))
+
     with open(triletter_dict_output, 'w') as f:
         for tri_id, tric in triletter_dict.items():
             print(tri_id, tric, file=f)
