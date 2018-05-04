@@ -7,4 +7,4 @@ python matchzoo/main.py --phase train --model_file ${currpath}/examples/robust04
 
 
 # predict with the model
-# python matchzoo/main.py --phase predict --model_file ${currpath}/examples/robust04/config/dssm_ranking.config
+python matchzoo/main.py --phase predict --model_file ${currpath}/examples/robust04/config/dssm_ranking.config
