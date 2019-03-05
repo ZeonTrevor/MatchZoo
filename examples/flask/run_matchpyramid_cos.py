@@ -27,6 +27,7 @@ from matchzoo.utils import *
 from matchzoo.optimizers import *
 from matchzoo.models import *
 from matchzoo.inputs.preprocess import *
+from matchzoo.layers import *
 
 # config = tensorflow.ConfigProto()
 # config.gpu_options.allow_growth = True
@@ -37,7 +38,7 @@ app = flask.Flask(__name__)
 model = None
 embed = None
 word_dict, iword_dict = None, None
-query_max_length, hist_size = 5, 30
+query_max_length, doc_max_length = 4, 500
 fill_word = 0
 
 
@@ -61,19 +62,6 @@ def load_word_dict():
     word_dict, iword_dict = read_word_dict("/home/fernando/MatchZoo/data/robust04/word_dict_new_n_stem_filtered_rob04_embed.txt")
 
 
-def cal_hist(t1_rep, t2_rep, qnum, hist_size):
-    mhist = np.zeros((qnum, hist_size), dtype=np.float32)
-    mm = t1_rep.dot(np.transpose(t2_rep))
-    for (i,j), v in np.ndenumerate(mm):
-        if i >= qnum:
-            break
-        vid = int((v + 1.) / 2. * (hist_size - 1.))
-        mhist[i][vid] += 1.
-    mhist += 1.
-    mhist = np.log10(mhist)
-    return mhist
-
-
 def preprocess_input_str(docs):
     docs = Preprocess.word_seg_en(docs)
     docs = Preprocess.word_stem(docs)
@@ -84,44 +72,53 @@ def preprocess_input_str(docs):
 def prepare_input_data(query, doc):
     query = preprocess_input_str([query])
     doc = preprocess_input_str([doc])
+
+    print("Q after preprocess:", " ".join(query))
+    print("D after preprocess:", " ".join(doc))
+
+    query_copy = [w for w in query if w in iword_dict]
+    doc_copy = [w for w in doc if w in iword_dict]
+
+    print("Q after filter:", " ".join(query_copy))
+    print("D after filter:", " ".join(doc_copy))
+
     query = [iword_dict[w] for w in query if w in iword_dict]
     doc = [iword_dict[w] for w in doc if w in iword_dict]
 
     X1 = np.zeros((1, query_max_length), dtype=np.int32)
     X1_len = np.zeros((1,), dtype=np.int32)
-    X2 = np.zeros((1, query_max_length, hist_size), dtype=np.float32)
+    X2 = np.zeros((1, doc_max_length), dtype=np.float32)
     X2_len = np.zeros((1,), dtype=np.int32)
-    X1[:] = fill_word
 
+    X1[:] = fill_word
+    X2[:] = fill_word
     q_cont = list(query)
     q_len = min(query_max_length, len(query))
     d_cont = list(doc)
-    d_len = len(d_cont)
+    d_len = min(doc_max_length, len(d_cont))
+
     X1[0, :q_len], X1_len[0] = q_cont[:q_len], q_len
-    X2[0], X2_len[0] = cal_hist(embed[q_cont], embed[d_cont], query_max_length, hist_size), d_len
+    X2[0, :d_len], X2_len[0] = d_cont[:d_len], d_len
+    print("Q length:{0}, D length:{1}".format(X1_len, X2_len))
     #return {'query': X1, 'query_len': X1_len, 'doc': X2, 'doc_len': X2_len}
-    return {'query': X1, 'doc': X2}
+    return {'query': X1, 'doc': X2, 'dpool_index': DynamicMaxPooling.dynamic_pooling_index(X1_len, X2_len, query_max_length, doc_max_length)}
 
 
 @app.route('/')
 def api_root():
-    return 'DRMM model is already loaded\n'
+    return 'MATCHPYRAMID COSINE model is already loaded\n'
 
 
 @app.route("/score", methods=["POST"])
 def predict():
-    try:
-        input_params = request.json
-        query = input_params['query']
-        doc = input_params['doc']
-        input_data = prepare_input_data(query, doc)
-        # print(input_data)
-        score = model.predict(input_data)
-        output_score = str(score[0][0])
-        # print(score[0][0])
-    except:
-        output_score = str(0.0)
-    return output_score
+    input_params = request.json
+    query = input_params['query']
+    doc = input_params['doc']
+    input_data = prepare_input_data(query, doc)
+    # print(input_data)
+    score = model.predict(input_data)
+    print(score[0][0])
+    return str(score[0][0])
 
 
 def shutdown_server():
@@ -134,7 +131,7 @@ def shutdown_server():
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     shutdown_server()
-    return 'Shutting down DRMM flask server...\n'
+    return 'Shutting down Matchpyramid COS flask server...\n'
 
 
 def main(argv):
@@ -143,7 +140,8 @@ def main(argv):
     #parser.add_argument('--phase', default='train', help='Phase: Can be train or predict, the default value is train.')
     #parser.add_argument('--model_file', default='./models/arci.config', help='Model_file: MatchZoo model file for the chosen model.')
     args = parser.parse_args()
-    model_file = "/home/fernando/MatchZoo/examples/robust04/config/drmm_ranking.config"  # args.model_file
+
+    model_file = "/home/fernando/MatchZoo/examples/robust04/config/matchpyramid_cos_ranking.config"  # args.model_file
     with open(model_file, 'r') as f:
         config = json.load(f)
 
@@ -151,9 +149,9 @@ def main(argv):
     input_conf = config['inputs']
     share_input_conf = input_conf['share']
 
-    global query_max_length, hist_size, fill_word
+    global query_max_length, doc_max_length, fill_word
     query_max_length = share_input_conf['text1_maxlen']
-    hist_size = share_input_conf['hist_size']
+    doc_max_length = share_input_conf['text2_maxlen']
     fill_word = share_input_conf['vocab_size'] - 1
 
     global embed
@@ -181,7 +179,7 @@ def main(argv):
 
     model._make_predict_function()
     load_word_dict()
-    app.run(host="127.0.0.1", port=5000)
+    app.run(host="127.0.0.1", port=5001)
     #return
 
 
